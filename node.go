@@ -90,6 +90,7 @@ func WithPreserveSpace() OutputOption {
 	}
 }
 
+// WithIndentation sets the indentation string used for formatting the output.
 func WithIndentation(indentation string) OutputOption {
 	return func(oc *outputConfiguration) {
 		oc.useIndentation = indentation
@@ -173,10 +174,8 @@ func outputXML(b *strings.Builder, n *Node, preserveSpaces bool, config *outputC
 		b.WriteString("<?" + n.Data)
 	default:
 		if config.useIndentation != "" {
-			for i := 0; i < indentationCount; i++ {
-				b.WriteString("\n")
-				b.WriteString(strings.Repeat(config.useIndentation, indentationCount))
-			}
+			b.WriteString("\n")
+			b.WriteString(strings.Repeat(config.useIndentation, indentationCount))
 		}
 		if n.Prefix == "" {
 			b.WriteString("<" + n.Data)
