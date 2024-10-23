@@ -56,6 +56,7 @@ type outputConfiguration struct {
 	preserveSpaces         bool
 	emptyElementTagSupport bool
 	skipComments           bool
+	useIndentation         string
 }
 
 type OutputOption func(*outputConfiguration)
@@ -86,6 +87,12 @@ func WithoutComments() OutputOption {
 func WithPreserveSpace() OutputOption {
 	return func(oc *outputConfiguration) {
 		oc.preserveSpaces = true
+	}
+}
+
+func WithIndentation(indentation string) OutputOption {
+	return func(oc *outputConfiguration) {
+		oc.useIndentation = indentation
 	}
 }
 
@@ -141,7 +148,7 @@ func calculatePreserveSpaces(n *Node, pastValue bool) bool {
 	return pastValue
 }
 
-func outputXML(b *strings.Builder, n *Node, preserveSpaces bool, config *outputConfiguration) {
+func outputXML(b *strings.Builder, n *Node, preserveSpaces bool, config *outputConfiguration, indentationCount int) {
 	preserveSpaces = calculatePreserveSpaces(n, preserveSpaces)
 	switch n.Type {
 	case TextNode:
@@ -165,11 +172,18 @@ func outputXML(b *strings.Builder, n *Node, preserveSpaces bool, config *outputC
 	case DeclarationNode:
 		b.WriteString("<?" + n.Data)
 	default:
+		if config.useIndentation != "" {
+			for i := 0; i < indentationCount; i++ {
+				b.WriteString("\n")
+				b.WriteString(strings.Repeat(config.useIndentation, indentationCount))
+			}
+		}
 		if n.Prefix == "" {
 			b.WriteString("<" + n.Data)
 		} else {
 			fmt.Fprintf(b, "<%s:%s", n.Prefix, n.Data)
 		}
+		indentationCount++
 	}
 
 	for _, attr := range n.Attr {
@@ -193,7 +207,7 @@ func outputXML(b *strings.Builder, n *Node, preserveSpaces bool, config *outputC
 		}
 	}
 	for child := n.FirstChild; child != nil; child = child.NextSibling {
-		outputXML(b, child, preserveSpaces, config)
+		outputXML(b, child, preserveSpaces, config, indentationCount)
 	}
 	if n.Type != DeclarationNode {
 		if n.Prefix == "" {
@@ -214,10 +228,10 @@ func (n *Node) OutputXML(self bool) string {
 	preserveSpaces := calculatePreserveSpaces(n, false)
 	var b strings.Builder
 	if self && n.Type != DocumentNode {
-		outputXML(&b, n, preserveSpaces, config)
+		outputXML(&b, n, preserveSpaces, config, 0)
 	} else {
 		for n := n.FirstChild; n != nil; n = n.NextSibling {
-			outputXML(&b, n, preserveSpaces, config)
+			outputXML(&b, n, preserveSpaces, config, 0)
 		}
 	}
 
@@ -236,10 +250,10 @@ func (n *Node) OutputXMLWithOptions(opts ...OutputOption) string {
 	preserveSpaces := calculatePreserveSpaces(n, pastPreserveSpaces)
 	var b strings.Builder
 	if config.printSelf && n.Type != DocumentNode {
-		outputXML(&b, n, preserveSpaces, config)
+		outputXML(&b, n, preserveSpaces, config, 0)
 	} else {
 		for n := n.FirstChild; n != nil; n = n.NextSibling {
-			outputXML(&b, n, preserveSpaces, config)
+			outputXML(&b, n, preserveSpaces, config, 0)
 		}
 	}
 
